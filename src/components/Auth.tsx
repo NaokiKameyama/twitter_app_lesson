@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styles from "./Auth.module.css";
 import { useDispatch } from "react-redux";
+import { updateUserProfile }from "../features/userSlice"
 import { auth, provider, storage} from "../firebase"
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
@@ -15,6 +16,9 @@ import Grid from '@material-ui/core/Grid';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
+import { IconButton } from '@material-ui/core';
+import AccountCircleIcon from "@material-ui/icons/AccountCircle";
+import EmailIcon from "@material-ui/icons/Email";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -49,6 +53,7 @@ const useStyles = makeStyles((theme) => ({
 
 const Auth: React.FC = () => {
   const classes = useStyles();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -75,9 +80,19 @@ const Auth: React.FC = () => {
         .map((n) => S[n % S.length])
         .join("");
       const fileName = randomChar + "_" + avatarImage.name;
-      await storage.ref(`avatars/${fileName}`).put(avatarImage)
+      await storage.ref(`avatars//${fileName}`).put(avatarImage)
       url = await storage.ref(`avatars`).child(fileName).getDownloadURL();
     }
+    await authUser.user?.updateProfile({
+      displayName: username,
+      photoURL: url
+    });
+    dispatch(
+      updateUserProfile({
+        displayName: username,
+        photoUrl: url
+      })
+    )
   }
   const signInGoogle = async() => {
     await auth.signInWithPopup(provider).catch((err) => alert(err.message));
@@ -95,6 +110,42 @@ const Auth: React.FC = () => {
             {isLogin ? "Login" : "Register"}
           </Typography>
           <form className={classes.form} noValidate>
+            {!isLogin && (<>
+              <TextField
+                  variant="outlined"
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="username"
+                  label="Username"
+                  name="username"
+                  autoComplete="username"
+                  autoFocus
+                  value={username}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setUsername(e.target.value);
+                  }}
+                />
+                <Box textAlign="cneter">
+                  <IconButton>
+                  <label>
+                      <AccountCircleIcon
+                        fontSize="large"
+                        className={
+                          avatarImage
+                            ? styles.login_addIconLoaded
+                            : styles.login_addIcon
+                        }
+                      />
+                      <input
+                        className={styles.login_hiddenIcon}
+                        type="file"
+                        onChange={onChangeImageHandler}
+                      />
+                    </label>
+                  </IconButton>
+                </Box>
+            </>)}
             <TextField
               variant="outlined"
               margin="normal"
@@ -126,6 +177,7 @@ const Auth: React.FC = () => {
               variant="contained"
               color="primary"
               className={classes.submit}
+              startIcon={<EmailIcon />}
               onClick={
                 isLogin
                   ? async() => {
